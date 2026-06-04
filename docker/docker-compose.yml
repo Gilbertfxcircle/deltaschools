@@ -1,0 +1,74 @@
+# Delta Plax Education Suite - cloud (SaaS) stack.
+# Run from the repo root:  docker compose -f docker/docker-compose.yml up -d --build
+# Reads secrets from the repo-root .env (see .env.example).
+
+services:
+  db:
+    image: postgres:15
+    container_name: deltaplax_db
+    environment:
+      POSTGRES_USER: deltaplax
+      POSTGRES_PASSWORD: deltaplax
+      POSTGRES_DB: deltaplax
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deltaplax"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: deltaplax_redis
+
+  minio:
+    image: minio/minio:latest
+    container_name: deltaplax_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+  api:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: deltaplax_api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+psycopg://deltaplax:deltaplax@db:5432/deltaplax
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      DELTAPLAX_ADMIN_EMAIL: ${DELTAPLAX_ADMIN_EMAIL}
+      DELTAPLAX_ADMIN_PASSWORD: ${DELTAPLAX_ADMIN_PASSWORD}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-deltaplax.com}
+    expose:
+      - "8000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: deltaplax_nginx
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/deltaplax.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  pgdata:
+  miniodata:
