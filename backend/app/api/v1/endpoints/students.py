@@ -12,9 +12,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, get_tenant_db, require_permission
+from app.core.audit import AuditAction
 from app.core.response import ok
 from app.core.security import encrypt_field
 from app.models.school_models import Student
+from app.services.audit import audit_actor_school
 
 router = APIRouter()
 
@@ -50,7 +52,7 @@ def list_students(
 def create_student(
     payload: StudentCreate,
     db: Session = Depends(get_tenant_db),
-    _: CurrentUser = Depends(require_permission("students:write")),
+    actor: CurrentUser = Depends(require_permission("students:write")),
 ) -> dict:
     """Create a student in the current tenant's schema (national ID encrypted)."""
     student = Student(
@@ -61,7 +63,21 @@ def create_student(
         national_id_enc=encrypt_field(payload.national_id) if payload.national_id else None,
     )
     db.add(student)
+    db.flush()
+
+    # Every write audits before returning (section 16). national_id is never
+    # placed in the audit payload in cleartext.
+    audit_actor_school(
+        db,
+        actor=actor,
+        action=AuditAction.CREATE,
+        resource="students",
+        resource_id=student.id,
+        new_value={
+            "admission_no": payload.admission_no,
+            "name": f"{payload.first_name} {payload.last_name}",
+        },
+    )
     db.commit()
     db.refresh(student)
-    # NOTE: the audit service writes a CREATE record before returning.
     return ok({"id": student.id}, message="Student created")

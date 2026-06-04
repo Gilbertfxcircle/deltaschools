@@ -8,9 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, get_db, require_super_admin
+from app.core.audit import AuditAction
 from app.core.response import ok
 from app.core.tenant import normalize_tenant_id
+from app.db.provisioning import provision_tenant
 from app.models.global_models import Institution
+from app.services.audit import audit_actor_global
 
 router = APIRouter()
 
@@ -26,9 +29,14 @@ class InstitutionCreate(BaseModel):
 def create_institution(
     payload: InstitutionCreate,
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_super_admin),
+    actor: CurrentUser = Depends(require_super_admin),
 ) -> dict:
-    """Register a new school (provisions its ``school_{id}`` schema downstream)."""
+    """Register a new school AND provision its ``school_{id}`` schema.
+
+    Provisioning creates the tenant schema, all per-school tables and the
+    school-level audit immutability trigger. A platform audit record is written
+    before the response (section 16).
+    """
     tenant_id = normalize_tenant_id(payload.tenant_id)
     inst = Institution(
         tenant_id=tenant_id,
@@ -37,9 +45,25 @@ def create_institution(
         country=payload.country,
     )
     db.add(inst)
+    db.flush()
+
+    # Provision the tenant's schema + tables + audit trigger.
+    schema = provision_tenant(tenant_id)
+
+    audit_actor_global(
+        db,
+        actor=actor,
+        action=AuditAction.CREATE,
+        resource="institutions",
+        resource_id=inst.id,
+        new_value={"tenant_id": tenant_id, "name": payload.name, "schema": schema},
+    )
     db.commit()
     db.refresh(inst)
-    return ok({"id": inst.id, "tenant_id": inst.tenant_id}, message="Institution created")
+    return ok(
+        {"id": inst.id, "tenant_id": inst.tenant_id, "schema": schema},
+        message="Institution created and provisioned",
+    )
 
 
 @router.get("")

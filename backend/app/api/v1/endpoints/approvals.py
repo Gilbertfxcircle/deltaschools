@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, get_current_user, get_db, require_permission
+from app.core.audit import AuditAction, ApprovalStatus
 from app.core.response import ok
 from app.domain.approvals import (
     ApprovalDecision,
@@ -24,6 +25,7 @@ from app.domain.approvals import (
     requires_approval,
 )
 from app.models.global_models import ApprovalRequestModel
+from app.services.audit import audit_actor_global
 
 router = APIRouter()
 
@@ -63,6 +65,16 @@ def submit_approval(
         state=ApprovalState.PENDING.value,
     )
     db.add(row)
+    db.flush()
+    audit_actor_global(
+        db,
+        actor=user,
+        action=AuditAction.CREATE,
+        resource="approval_requests",
+        resource_id=row.id,
+        new_value={"resource": payload.resource, "reason": payload.reason},
+        approval_status=ApprovalStatus.PENDING,
+    )
     db.commit()
     db.refresh(row)
     # NOTE: notify the school director (email + in-app) here.
@@ -101,6 +113,21 @@ def decide_approval(
     row.decided_by = user.id
     row.decided_at = domain.decided_at
     row.decision_notes = payload.notes
+
+    # The outcome is written to the immutable audit log (section 4.4).
+    audit_actor_global(
+        db,
+        actor=user,
+        action=AuditAction.APPROVE if decision == ApprovalDecision.APPROVED
+        else AuditAction.REJECT,
+        resource=row.resource,
+        resource_id=row.resource_id,
+        new_value=json.loads(row.requested_change) if row.state == "approved" else None,
+        approval_status=ApprovalStatus.APPROVED
+        if domain.state == ApprovalState.APPROVED
+        else ApprovalStatus.REJECTED,
+        approved_by=user.id,
+    )
     db.commit()
 
     # If approved, the service layer applies `requested_change` to tenant data
