@@ -18,7 +18,6 @@ from __future__ import annotations
 import os
 import sys
 import uuid
-from datetime import datetime, timezone
 
 # Make ``app`` importable whether running from the dev layout (repo/backend/app)
 # or the container layout (/app/app, with scripts at /app/scripts).
@@ -28,12 +27,12 @@ for _candidate in (os.path.join(_HERE, "..", "backend"), os.path.join(_HERE, "..
         sys.path.insert(0, os.path.abspath(_candidate))
         break
 
-from sqlalchemy import text  # noqa: E402
+from sqlalchemy import select  # noqa: E402
 
 from app.core.security import hash_password  # noqa: E402
 from app.core.security_policy import validate_password_strength  # noqa: E402
-from app.core.tenant import GLOBAL_SCHEMA  # noqa: E402
-from app.db.session import engine  # noqa: E402
+from app.db.session import global_session  # noqa: E402
+from app.models.global_models import SuperAdmin  # noqa: E402
 
 SUPER_ADMIN_EMAIL = os.environ.get("DELTAPLAX_ADMIN_EMAIL", "admin@deltaplax.com")
 SUPER_ADMIN_PASSWORD = os.environ.get("DELTAPLAX_ADMIN_PASSWORD")  # REQUIRED
@@ -50,34 +49,27 @@ def bootstrap() -> None:
 
     hashed = hash_password(SUPER_ADMIN_PASSWORD)
 
-    with engine.begin() as conn:
-        existing = conn.execute(
-            text(f"SELECT id FROM {GLOBAL_SCHEMA}.super_admins WHERE email = :email"),
-            {"email": SUPER_ADMIN_EMAIL},
-        ).fetchone()
+    # Using the ORM keeps this portable across PostgreSQL (global schema) and
+    # SQLite (single file, no schemas) - the model carries the right schema.
+    with global_session() as db:
+        existing = db.execute(
+            select(SuperAdmin).where(SuperAdmin.email == SUPER_ADMIN_EMAIL)
+        ).scalar_one_or_none()
 
         if existing:
             print(f"[SKIP] Super admin '{SUPER_ADMIN_EMAIL}' already exists.")
             return
 
-        conn.execute(
-            text(
-                f"""
-                INSERT INTO {GLOBAL_SCHEMA}.super_admins
-                  (id, full_name, email, password_hash, role, is_active,
-                   created_at, updated_at, mfa_enabled)
-                VALUES
-                  (:id, :name, :email, :password, 'SUPER_ADMIN', true,
-                   :now, :now, false)
-                """
-            ),
-            {
-                "id": str(uuid.uuid4()),
-                "name": SUPER_ADMIN_NAME,
-                "email": SUPER_ADMIN_EMAIL,
-                "password": hashed,
-                "now": datetime.now(timezone.utc),
-            },
+        db.add(
+            SuperAdmin(
+                id=str(uuid.uuid4()),
+                full_name=SUPER_ADMIN_NAME,
+                email=SUPER_ADMIN_EMAIL,
+                password_hash=hashed,
+                role="SUPER_ADMIN",
+                is_active=True,
+                mfa_enabled=False,
+            )
         )
         print(f"[OK] Delta Plax Super Admin created: {SUPER_ADMIN_EMAIL}")
 

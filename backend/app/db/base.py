@@ -12,6 +12,7 @@ from __future__ import annotations
 from sqlalchemy import MetaData
 from sqlalchemy.orm import DeclarativeBase
 
+from app.core.config import get_settings
 from app.core.tenant import GLOBAL_SCHEMA
 
 # A consistent naming convention keeps Alembic autogenerate deterministic.
@@ -23,12 +24,18 @@ NAMING_CONVENTION = {
     "pk": "pk_%(table_name)s",
 }
 
+# SQLite has no notion of schemas, so the global tables live in the single
+# database file there. On PostgreSQL they live in the dedicated global schema.
+# Resolving this from settings is what lets the same models serve both the
+# cloud (Postgres) and the offline EXE (SQLite) deployments.
+_GLOBAL_SCHEMA = None if get_settings().is_sqlite else GLOBAL_SCHEMA
+
 
 class GlobalBase(DeclarativeBase):
     """Base for tables that live in the global platform schema."""
 
     metadata = MetaData(
-        naming_convention=NAMING_CONVENTION, schema=GLOBAL_SCHEMA
+        naming_convention=NAMING_CONVENTION, schema=_GLOBAL_SCHEMA
     )
 
 

@@ -1,0 +1,106 @@
+name: CI
+
+# Proves the build on every push / PR: installs real dependencies (which the
+# authoring sandbox could not), runs migrations against SQLite, boots the API,
+# runs the Python test suite, and type-checks + builds the React frontend.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (pytest + boot smoke test)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    env:
+      DATABASE_URL: "sqlite+pysqlite:///./local_data/deltaplax.sqlite3"
+      SECRET_KEY: "ci-secret-key-1234567890"
+      ENCRYPTION_KEY: "ci-encryption-key-123456789012"
+      DELTAPLAX_ADMIN_EMAIL: "admin@deltaplax.com"
+      DELTAPLAX_ADMIN_PASSWORD: "DeltaPlax#2026"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dev dependencies (SQLite stack)
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Compile all sources
+        working-directory: backend
+        run: python -m compileall -q app
+
+      - name: Run database migrations (SQLite)
+        working-directory: backend
+        run: |
+          mkdir -p local_data
+          python -m alembic upgrade head
+
+      - name: Bootstrap super admin (idempotent)
+        working-directory: backend
+        run: python ../scripts/bootstrap_superadmin.py
+
+      - name: Seed demo data
+        working-directory: backend
+        run: python ../scripts/seed_demo_data.py
+
+      - name: Run tests
+        working-directory: backend
+        run: python -m pytest -q
+
+      - name: Boot API smoke test (start uvicorn, hit /health)
+        working-directory: backend
+        run: |
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health > /tmp/health.json; then
+              echo "Health OK:"; cat /tmp/health.json; echo
+              kill $SERVER_PID 2>/dev/null || true
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server did not become healthy in time"
+          kill $SERVER_PID 2>/dev/null || true
+          exit 1
+
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (typecheck + test + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type-check (strict, no emit)
+        run: npm run typecheck
+
+      - name: Unit tests (vitest)
+        run: npm run test
+
+      - name: Production build
+        run: npm run build
