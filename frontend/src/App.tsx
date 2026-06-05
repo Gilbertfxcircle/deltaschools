@@ -13,6 +13,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { StudentsPage } from "@/pages/StudentsPage";
+import { BillingPage } from "@/pages/BillingPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { AuditPage } from "@/pages/AuditPage";
 import { ForbiddenPage, ModulePlaceholder, NotFoundPage } from "@/pages/MiscPages";
@@ -87,7 +88,7 @@ export default function App(): JSX.Element {
           path="/billing"
           element={
             <ModuleRoute module="billing">
-              <ModulePlaceholder title="Billing" />
+              <BillingPage />
             </ModuleRoute>
           }
         />
@@ -96,6 +97,14 @@ export default function App(): JSX.Element {
           element={
             <ModuleRoute module="payroll">
               <ModulePlaceholder title="Payroll" />
+            </ModuleRoute>
+          }
+        />
+        <Route
+          path="/hr"
+          element={
+            <ModuleRoute module="hr_management">
+              <ModulePlaceholder title="Staff & HR" />
             </ModuleRoute>
           }
         />
@@ -129,6 +138,30 @@ export default function App(): JSX.Element {
             <ModuleRoute module="lms">
               <ModulePlaceholder title="E-Learning" />
             </ModuleRoute>
+          }
+        />
+        <Route
+          path="/communication"
+          element={
+            <ModuleRoute module="communication_hub">
+              <ModulePlaceholder title="Communication" />
+            </ModuleRoute>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <ModuleRoute module="document_management">
+              <ModulePlaceholder title="Documents" />
+            </ModuleRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute permission="reports:read">
+              <ModulePlaceholder title="Reports" />
+            </ProtectedRoute>
           }
         />
         <Route

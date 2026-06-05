@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     openai_api_key: str | None = Field(default=None)
     ai_model: str = Field(default="gpt-4o-mini")
 
+    # --- SMS (optional) ---
+    africas_talking_api_key: str | None = Field(default=None)
+    africas_talking_sender_id: str = Field(default="DELTAPLAX")
+
+    # --- Payment gateways (optional) ---
+    mtn_momo_api_key: str | None = Field(default=None)
+    airtel_money_api_key: str | None = Field(default=None)
+
     # --- Sync (local server) ---
     cloud_sync_url: str = Field(default="https://api.deltaplax.com")
     sync_poll_seconds: int = Field(default=30)

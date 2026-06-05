@@ -42,13 +42,24 @@ class TestDatabaseIntegration(unittest.TestCase):
 
         from app.db.provisioning import provision_tenant
         from app.db.session import tenant_session
-        from app.models.school_models import SchoolAuditLog, Student
+        from app.models.school_models import (
+            FeeStructure,
+            Invoice,
+            LibraryBook,
+            Payment,
+            SchoolAuditLog,
+            Student,
+        )
 
         cls.select = select
         cls.text = text
         cls.tenant_session = staticmethod(tenant_session)
         cls.Student = Student
         cls.SchoolAuditLog = SchoolAuditLog
+        cls.FeeStructure = FeeStructure
+        cls.Invoice = Invoice
+        cls.Payment = Payment
+        cls.LibraryBook = LibraryBook
         cls.db_path = db_path
 
         # Provision twice to prove idempotency.
@@ -75,6 +86,50 @@ class TestDatabaseIntegration(unittest.TestCase):
         token = encrypt_field("CM1234567")
         self.assertNotIn("CM1234567", token)
         self.assertEqual(decrypt_field(token), "CM1234567")
+
+    def test_new_module_tables_provisioned(self):
+        # Tables added for the extended modules must exist after provisioning.
+        with self.tenant_session("demo") as db:
+            for table in (
+                "report_cards", "payroll", "leaves", "library_books", "library_loans",
+                "hostel_rooms", "hostel_allocations", "transport_routes",
+                "transport_assignments", "lms_courses", "lms_lessons", "notifications",
+                "documents",
+            ):
+                count = db.execute(
+                    self.text(f"SELECT COUNT(*) FROM {table}")
+                ).scalar_one()
+                self.assertEqual(count, 0)
+
+    def test_finance_invoice_payment_flow(self):
+        from app.domain.finance import apply_payment
+
+        with self.tenant_session("demo") as db:
+            fee = self.FeeStructure(
+                name="Term 1", academic_year="2026", amount=100000, currency="UGX"
+            )
+            db.add(fee)
+            db.flush()
+            inv = self.Invoice(
+                student_id="stu-fin-1", fee_structure_id=fee.id,
+                amount=100000, balance=100000, status="unpaid",
+            )
+            db.add(inv)
+            db.flush()
+            inv_id = inv.id
+
+        # Record a partial payment and recompute via the pure rule.
+        with self.tenant_session("demo") as db:
+            inv = db.get(self.Invoice, inv_id)
+            paid = float(inv.amount) - float(inv.balance)
+            new_balance, status = apply_payment(float(inv.amount), paid, 40000)
+            inv.balance = float(new_balance)
+            inv.status = status.value
+
+        with self.tenant_session("demo") as db:
+            inv = db.get(self.Invoice, inv_id)
+            self.assertEqual(float(inv.balance), 60000.0)
+            self.assertEqual(inv.status, "partial")
 
     def test_audit_insert_then_update_rejected(self):
         from datetime import datetime, timezone

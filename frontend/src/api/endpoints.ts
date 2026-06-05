@@ -75,3 +75,77 @@ export function decideApproval(
 export function listAudit(limit = 100): Promise<AuditEntry[]> {
   return apiGet<AuditEntry[]>("/audit", { params: { limit } });
 }
+
+// --- Finance (billing module) ---
+export interface InvoiceSummary {
+  id: string;
+  amount: number;
+  balance: number;
+  status: string;
+}
+
+export function studentInvoices(studentId: string): Promise<InvoiceSummary[]> {
+  return apiGet<InvoiceSummary[]>(`/finance/invoices/student/${studentId}`);
+}
+
+export interface CreateInvoicePayload {
+  student_id: string;
+  fee_structure_id: string;
+  amount: number;
+}
+
+export function createInvoice(
+  payload: CreateInvoicePayload,
+): Promise<{ id: string; balance: number }> {
+  return apiPost<{ id: string; balance: number }>("/finance/invoices", payload);
+}
+
+export interface RecordPaymentPayload {
+  invoice_id: string;
+  student_id: string;
+  amount: number;
+  method?: string;
+  reference?: string;
+}
+
+export function recordPayment(
+  payload: RecordPaymentPayload,
+): Promise<{ payment_id: string; balance: number; status: string }> {
+  return apiPost("/finance/payments", payload);
+}
+
+export interface FinanceSummary {
+  total_billed: number;
+  total_outstanding: number;
+  total_collected: number;
+}
+
+export function financeSummary(): Promise<FinanceSummary> {
+  return apiGet<FinanceSummary>("/reports/finance/summary");
+}
+
+// --- Attendance ---
+export interface AttendanceSummary {
+  student_id: string;
+  total: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  rate: number;
+}
+
+export function attendanceSummary(studentId: string): Promise<AttendanceSummary> {
+  return apiGet<AttendanceSummary>(`/attendance/student/${studentId}/summary`);
+}
+
+export interface MarkAttendancePayload {
+  student_id: string;
+  class_id: string;
+  on_date: string;
+  status: string;
+}
+
+export function markAttendance(payload: MarkAttendancePayload): Promise<{ id: string }> {
+  return apiPost<{ id: string }>("/attendance", payload);
+}

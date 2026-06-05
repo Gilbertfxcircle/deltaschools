@@ -37,7 +37,21 @@ from app.models.school_models import (  # noqa: E402
 )
 
 DEMO_TENANT = "demo"
-DEMO_MODULES = ["attendance", "billing", "library", "parent_portal", "teacher_portal"]
+DEMO_MODULES = [
+    "attendance",
+    "billing",
+    "payroll",
+    "library",
+    "hostel",
+    "transport",
+    "lms",
+    "hr_management",
+    "communication_hub",
+    "document_management",
+    "parent_portal",
+    "teacher_portal",
+    "ai_assistant",
+]
 
 
 def _seed_global() -> None:

@@ -131,11 +131,18 @@ DEFAULT_ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
         {
             "students:*",
             "staff:read",
+            "staff:write",
             "academic:*",
             "attendance:*",
             "exams:*",
             "reports:*",
             "finance:read",
+            "library:*",
+            "hostel:*",
+            "transport:*",
+            "lms:*",
+            "communication:*",
+            "documents:*",
             "approvals:decide",
             "audit:read",
         }
@@ -146,6 +153,9 @@ DEFAULT_ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
             "payroll:*",
             "students:read",
             "reports:read",
+            "documents:read",
+            "documents:write",
+            "communication:write",
             "audit:read",
         }
     ),
@@ -158,6 +168,10 @@ DEFAULT_ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
             "marks:read",
             "attendance:read",
             "reports:*",
+            "library:read",
+            "lms:*",
+            "communication:*",
+            "documents:*",
             "approvals:decide",
         }
     ),
@@ -166,9 +180,13 @@ DEFAULT_ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
             "academic:read",
             "marks:*",
             "exams:read",
+            "exams:write",
             "attendance:*",
             "students:read",
             "reports:read",
+            "lms:*",
+            "library:read",
+            "communication:write",
         }
     ),
     Role.TEACHER: frozenset(
@@ -179,6 +197,10 @@ DEFAULT_ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
             "marks:read",
             "students:read",
             "academic:read",
+            "lms:read",
+            "lms:write",
+            "library:read",
+            "communication:write",
         }
     ),
     Role.PARENT: frozenset(
@@ -187,6 +209,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
             "finance:read_own",
             "attendance:read_own",
             "reports:read_own",
+            "communication:read",
         }
     ),
     Role.STUDENT: frozenset(
@@ -195,6 +218,8 @@ DEFAULT_ROLE_PERMISSIONS: dict[Role, frozenset[str]] = {
             "marks:read_self",
             "attendance:read_self",
             "lms:read",
+            "library:read",
+            "communication:read",
         }
     ),
 }
