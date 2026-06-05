@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { visibleNav, type NavItem } from "@/nav/navConfig";
+import { NAV_ITEMS, visibleNav, type NavItem } from "@/nav/navConfig";
 import type { ModuleKey } from "@/api/types";
+
+const ALL_MODULES: ModuleKey[] = [
+  "attendance",
+  "billing",
+  "payroll",
+  "hostel",
+  "library",
+  "transport",
+  "lms",
+  "hr_management",
+  "communication_hub",
+  "document_management",
+];
 
 const ITEMS: NavItem[] = [
   { key: "dashboard", label: "Dashboard", path: "/" },
@@ -43,5 +56,51 @@ describe("visibleNav (module + permission gating)", () => {
       can: () => false,
     });
     expect(nav.map((n) => n.key)).toEqual(["dashboard"]);
+  });
+});
+
+describe("NAV_ITEMS registry (real navigation)", () => {
+  it("exposes every module page to a director with all modules enabled", () => {
+    const enabled = new Set<ModuleKey>(ALL_MODULES);
+    const nav = visibleNav(NAV_ITEMS, {
+      isModuleEnabled: (k) => enabled.has(k),
+      can: () => true, // director-style: full permissions
+    });
+    const keys = nav.map((n) => n.key);
+    for (const key of [
+      "students", "attendance", "exams", "billing", "payroll", "hr",
+      "library", "hostel", "transport", "lms", "communication", "documents",
+      "reports", "approvals", "audit",
+    ]) {
+      expect(keys).toContain(key);
+    }
+  });
+
+  it("hides module pages when modules are disabled even with full permissions", () => {
+    const nav = visibleNav(NAV_ITEMS, {
+      isModuleEnabled: () => false, // no optional modules
+      can: () => true,
+    });
+    const keys = nav.map((n) => n.key);
+    // Module-gated pages disappear...
+    expect(keys).not.toContain("library");
+    expect(keys).not.toContain("payroll");
+    expect(keys).not.toContain("hr");
+    // ...but ungated core pages remain.
+    expect(keys).toContain("dashboard");
+    expect(keys).toContain("students");
+    expect(keys).toContain("exams");
+  });
+
+  it("hides reports/audit/approvals from a user without those permissions", () => {
+    const nav = visibleNav(NAV_ITEMS, {
+      isModuleEnabled: () => true,
+      can: (p) => p === "students:read",
+    });
+    const keys = nav.map((n) => n.key);
+    expect(keys).toContain("students");
+    expect(keys).not.toContain("reports");
+    expect(keys).not.toContain("audit");
+    expect(keys).not.toContain("approvals");
   });
 });

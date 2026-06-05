@@ -24,6 +24,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     module: "attendance",
     permission: "attendance:read",
   },
+  { key: "exams", label: "Examinations", path: "/exams", permission: "exams:read" },
   { key: "billing", label: "Billing", path: "/billing", module: "billing", permission: "finance:read" },
   { key: "payroll", label: "Payroll", path: "/payroll", module: "payroll", permission: "payroll:read" },
   { key: "hr", label: "Staff & HR", path: "/hr", module: "hr_management", permission: "staff:read" },

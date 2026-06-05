@@ -34,6 +34,43 @@ class MarkCreate(BaseModel):
     score: float
 
 
+@router.get("")
+def list_exams(
+    db: Session = Depends(get_tenant_db),
+    _: CurrentUser = Depends(require_permission("exams:read")),
+) -> dict:
+    rows = db.execute(select(Examination)).scalars().all()
+    return ok(
+        [
+            {"id": r.id, "name": r.name, "academic_year": r.academic_year, "term": r.term}
+            for r in rows
+        ]
+    )
+
+
+@router.get("/marks/{examination_id}")
+def list_marks(
+    examination_id: str,
+    db: Session = Depends(get_tenant_db),
+    _: CurrentUser = Depends(require_permission("marks:read")),
+) -> dict:
+    rows = (
+        db.execute(select(Mark).where(Mark.examination_id == examination_id)).scalars().all()
+    )
+    return ok(
+        [
+            {
+                "id": r.id,
+                "student_id": r.student_id,
+                "subject_id": r.subject_id,
+                "score": float(r.score),
+                "grade": r.grade,
+            }
+            for r in rows
+        ]
+    )
+
+
 @router.post("")
 def create_exam(
     payload: ExamCreate,

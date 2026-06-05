@@ -14,9 +14,20 @@ import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { StudentsPage } from "@/pages/StudentsPage";
 import { BillingPage } from "@/pages/BillingPage";
+import { AttendancePage } from "@/pages/AttendancePage";
+import { PayrollPage } from "@/pages/PayrollPage";
+import { HrPage } from "@/pages/HrPage";
+import { LibraryPage } from "@/pages/LibraryPage";
+import { HostelPage } from "@/pages/HostelPage";
+import { TransportPage } from "@/pages/TransportPage";
+import { LmsPage } from "@/pages/LmsPage";
+import { CommunicationPage } from "@/pages/CommunicationPage";
+import { DocumentsPage } from "@/pages/DocumentsPage";
+import { ReportsPage } from "@/pages/ReportsPage";
+import { ExamsPage } from "@/pages/ExamsPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { AuditPage } from "@/pages/AuditPage";
-import { ForbiddenPage, ModulePlaceholder, NotFoundPage } from "@/pages/MiscPages";
+import { ForbiddenPage, NotFoundPage } from "@/pages/MiscPages";
 import type { ModuleKey } from "@/api/types";
 
 /** Guard a route by module enablement; redirect to dashboard if disabled. */
@@ -80,8 +91,16 @@ export default function App(): JSX.Element {
           path="/attendance"
           element={
             <ModuleRoute module="attendance">
-              <ModulePlaceholder title="Attendance" />
+              <AttendancePage />
             </ModuleRoute>
+          }
+        />
+        <Route
+          path="/exams"
+          element={
+            <ProtectedRoute permission="exams:read">
+              <ExamsPage />
+            </ProtectedRoute>
           }
         />
         <Route
@@ -96,7 +115,7 @@ export default function App(): JSX.Element {
           path="/payroll"
           element={
             <ModuleRoute module="payroll">
-              <ModulePlaceholder title="Payroll" />
+              <PayrollPage />
             </ModuleRoute>
           }
         />
@@ -104,7 +123,7 @@ export default function App(): JSX.Element {
           path="/hr"
           element={
             <ModuleRoute module="hr_management">
-              <ModulePlaceholder title="Staff & HR" />
+              <HrPage />
             </ModuleRoute>
           }
         />
@@ -112,7 +131,7 @@ export default function App(): JSX.Element {
           path="/library"
           element={
             <ModuleRoute module="library">
-              <ModulePlaceholder title="Library" />
+              <LibraryPage />
             </ModuleRoute>
           }
         />
@@ -120,7 +139,7 @@ export default function App(): JSX.Element {
           path="/hostel"
           element={
             <ModuleRoute module="hostel">
-              <ModulePlaceholder title="Hostel" />
+              <HostelPage />
             </ModuleRoute>
           }
         />
@@ -128,7 +147,7 @@ export default function App(): JSX.Element {
           path="/transport"
           element={
             <ModuleRoute module="transport">
-              <ModulePlaceholder title="Transport" />
+              <TransportPage />
             </ModuleRoute>
           }
         />
@@ -136,7 +155,7 @@ export default function App(): JSX.Element {
           path="/lms"
           element={
             <ModuleRoute module="lms">
-              <ModulePlaceholder title="E-Learning" />
+              <LmsPage />
             </ModuleRoute>
           }
         />
@@ -144,7 +163,7 @@ export default function App(): JSX.Element {
           path="/communication"
           element={
             <ModuleRoute module="communication_hub">
-              <ModulePlaceholder title="Communication" />
+              <CommunicationPage />
             </ModuleRoute>
           }
         />
@@ -152,7 +171,7 @@ export default function App(): JSX.Element {
           path="/documents"
           element={
             <ModuleRoute module="document_management">
-              <ModulePlaceholder title="Documents" />
+              <DocumentsPage />
             </ModuleRoute>
           }
         />
@@ -160,7 +179,7 @@ export default function App(): JSX.Element {
           path="/reports"
           element={
             <ProtectedRoute permission="reports:read">
-              <ModulePlaceholder title="Reports" />
+              <ReportsPage />
             </ProtectedRoute>
           }
         />

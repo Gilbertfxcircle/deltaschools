@@ -69,6 +69,28 @@ def create_staff(
     return ok({"id": row.id}, message="Staff created")
 
 
+@router.get("/leaves")
+def list_leaves(
+    db: Session = Depends(get_tenant_db),
+    _: CurrentUser = Depends(require_permission("staff:read")),
+) -> dict:
+    rows = db.execute(select(Leave)).scalars().all()
+    return ok(
+        [
+            {
+                "id": r.id,
+                "staff_id": r.staff_id,
+                "leave_type": r.leave_type,
+                "start_date": r.start_date.isoformat() if r.start_date else None,
+                "end_date": r.end_date.isoformat() if r.end_date else None,
+                "status": r.status,
+                "reason": r.reason,
+            }
+            for r in rows
+        ]
+    )
+
+
 @router.post("/leaves")
 def request_leave(
     payload: LeaveCreate,

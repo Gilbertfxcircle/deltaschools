@@ -25,6 +25,28 @@ class PayrollRun(BaseModel):
     other_deductions: float = 0
 
 
+@router.get("")
+def list_payroll(
+    db: Session = Depends(get_tenant_db),
+    _: CurrentUser = Depends(require_permission("payroll:read")),
+) -> dict:
+    rows = db.execute(select(Payroll)).scalars().all()
+    return ok(
+        [
+            {
+                "id": r.id,
+                "staff_id": r.staff_id,
+                "period": r.period,
+                "gross": float(r.gross),
+                "paye": float(r.paye),
+                "net": float(r.net),
+                "status": r.status,
+            }
+            for r in rows
+        ]
+    )
+
+
 @router.post("")
 def run_payroll(
     payload: PayrollRun,

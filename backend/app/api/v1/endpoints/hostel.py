@@ -54,6 +54,25 @@ def create_room(
     return ok({"id": row.id}, message="Room created")
 
 
+@router.get("/allocations")
+def list_allocations(
+    db: Session = Depends(get_tenant_db),
+    _: CurrentUser = Depends(require_permission("hostel:read")),
+) -> dict:
+    rows = db.execute(select(HostelAllocation)).scalars().all()
+    return ok(
+        [
+            {
+                "id": r.id,
+                "room_id": r.room_id,
+                "student_id": r.student_id,
+                "academic_year": r.academic_year,
+            }
+            for r in rows
+        ]
+    )
+
+
 @router.post("/allocations")
 def allocate(
     payload: AllocationCreate,

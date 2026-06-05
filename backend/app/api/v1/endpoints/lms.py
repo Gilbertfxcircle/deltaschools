@@ -58,6 +58,27 @@ def create_course(
     return ok({"id": row.id}, message="Course created")
 
 
+@router.get("/courses/{course_id}/lessons")
+def list_lessons(
+    course_id: str,
+    db: Session = Depends(get_tenant_db),
+    _: CurrentUser = Depends(require_permission("lms:read")),
+) -> dict:
+    rows = (
+        db.execute(
+            select(LmsLesson).where(LmsLesson.course_id == course_id).order_by(LmsLesson.position)
+        )
+        .scalars()
+        .all()
+    )
+    return ok(
+        [
+            {"id": r.id, "title": r.title, "content_url": r.content_url, "position": r.position}
+            for r in rows
+        ]
+    )
+
+
 @router.post("/lessons")
 def create_lesson(
     payload: LessonCreate,

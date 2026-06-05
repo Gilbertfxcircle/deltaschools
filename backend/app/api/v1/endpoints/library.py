@@ -66,6 +66,27 @@ def add_book(
     return ok({"id": row.id}, message="Book added")
 
 
+@router.get("/loans")
+def list_loans(
+    db: Session = Depends(get_tenant_db),
+    _: CurrentUser = Depends(require_permission("library:read")),
+) -> dict:
+    rows = db.execute(select(LibraryLoan)).scalars().all()
+    return ok(
+        [
+            {
+                "id": r.id,
+                "book_id": r.book_id,
+                "borrower_id": r.borrower_id,
+                "borrowed_at": r.borrowed_at.isoformat() if r.borrowed_at else None,
+                "due_at": r.due_at.isoformat() if r.due_at else None,
+                "returned_at": r.returned_at.isoformat() if r.returned_at else None,
+            }
+            for r in rows
+        ]
+    )
+
+
 @router.post("/loans")
 def loan_book(
     payload: LoanCreate,

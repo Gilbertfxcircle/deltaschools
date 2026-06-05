@@ -54,6 +54,25 @@ def create_route(
     return ok({"id": row.id}, message="Route created")
 
 
+@router.get("/assignments")
+def list_assignments(
+    db: Session = Depends(get_tenant_db),
+    _: CurrentUser = Depends(require_permission("transport:read")),
+) -> dict:
+    rows = db.execute(select(TransportAssignment)).scalars().all()
+    return ok(
+        [
+            {
+                "id": r.id,
+                "route_id": r.route_id,
+                "student_id": r.student_id,
+                "stop_name": r.stop_name,
+            }
+            for r in rows
+        ]
+    )
+
+
 @router.post("/assignments")
 def assign(
     payload: AssignmentCreate,
