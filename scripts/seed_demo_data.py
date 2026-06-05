@@ -27,6 +27,7 @@ for _candidate in (os.path.join(_HERE, "..", "backend"), os.path.join(_HERE, "..
 from sqlalchemy import select  # noqa: E402
 
 from app.core.security import hash_password  # noqa: E402
+from app.db.provisioning import provision_tenant  # noqa: E402
 from app.db.session import global_session, tenant_session  # noqa: E402
 from app.models.global_models import Institution, InstitutionModule  # noqa: E402
 from app.models.school_models import (  # noqa: E402
@@ -37,7 +38,21 @@ from app.models.school_models import (  # noqa: E402
 )
 
 DEMO_TENANT = "demo"
-DEMO_MODULES = ["attendance", "billing", "library", "parent_portal", "teacher_portal"]
+DEMO_MODULES = [
+    "attendance",
+    "billing",
+    "payroll",
+    "library",
+    "hostel",
+    "transport",
+    "lms",
+    "hr_management",
+    "communication_hub",
+    "document_management",
+    "parent_portal",
+    "teacher_portal",
+    "ai_assistant",
+]
 
 
 def _seed_global() -> None:
@@ -68,6 +83,10 @@ def _seed_global() -> None:
 
 
 def _seed_tenant() -> None:
+    # Ensure the per-school schema/tables (and audit trigger) exist before
+    # seeding. On SQLite this creates the tables in the single database file;
+    # on PostgreSQL it creates the school_<id> schema. Idempotent.
+    provision_tenant(DEMO_TENANT)
     with tenant_session(DEMO_TENANT) as db:
         if db.execute(select(User).limit(1)).scalar_one_or_none() is None:
             db.add_all(

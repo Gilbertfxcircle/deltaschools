@@ -29,16 +29,16 @@ architecturally and security-critical core that the rest of the product
 | FastAPI app: tenant middleware, routers, response envelope | ✅ |
 | Alembic migration (global schema + audit trigger) + tenant provisioning | ✅ |
 | Docker Compose (API, Postgres, Redis, MinIO, Nginx subdomain routing) | ✅ |
-| Unit tests for every "law" (70 tests; 67 run with zero deps, 3 DB integration) | ✅ |
+| Domain modules: academic, attendance, exams/grading, finance, payroll, HR, library, hostel, transport, LMS, communication, documents, reports, AI | ✅ |
+| Unit tests for every "law" + module logic (104 tests; 99 run with zero deps, 5 DB integration) | ✅ |
 
 ## Not yet implemented (planned next)
 
-Frontend (React/Vite), Flutter mobile app, full Windows EXE build (the installer
-scripts are scaffolded; building requires Windows + PyInstaller/Inno Setup),
-Celery task wiring, AI features, and the remaining per-school domain modules
-(library, hostel, transport, payroll UI, LMS, etc.). The per-school ORM currently
-models a representative core; remaining tables follow the same pattern via new
-migrations.
+Frontend (React/Vite) is in place for core flows; remaining optional-module UIs
+show a placeholder when enabled. The Flutter mobile app and full Windows EXE build
+(installer scripts are scaffolded) are still pending, along with Celery task
+wiring and live AI/SMS/payment provider integrations (these degrade gracefully
+when unconfigured).
 
 ## Project layout
 

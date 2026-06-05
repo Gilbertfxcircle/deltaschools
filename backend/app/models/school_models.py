@@ -208,3 +208,161 @@ class SyncQueue(SchoolBase, UUIDPKMixin):
     synced: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     sync_attempts: Mapped[int] = mapped_column(Integer, default=0)
     conflict_flag: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+
+# ---------------------------------------------------------------------------
+# Extended module tables (academic, exams, payroll, library, hostel, transport,
+# lms, hr, communication, documents). Same per-tenant schema pattern as above.
+# ---------------------------------------------------------------------------
+
+
+class ReportCard(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A generated report card snapshot for a student/exam (protected data)."""
+
+    __tablename__ = "report_cards"
+
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), index=True)
+    examination_id: Mapped[str] = mapped_column(ForeignKey("examinations.id"), index=True)
+    average: Mapped[float] = mapped_column(Numeric(5, 2))
+    gpa: Mapped[float] = mapped_column(Numeric(4, 2))
+    overall_grade: Mapped[str] = mapped_column(String(4))
+    position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class Payroll(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A staff payslip record for a period (protected financial data)."""
+
+    __tablename__ = "payroll"
+
+    staff_id: Mapped[str] = mapped_column(ForeignKey("staff.id"), index=True)
+    period: Mapped[str] = mapped_column(String(16))  # e.g. 2026-06
+    gross: Mapped[float] = mapped_column(Numeric(12, 2))
+    paye: Mapped[float] = mapped_column(Numeric(12, 2))
+    other_deductions: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    net: Mapped[float] = mapped_column(Numeric(12, 2))
+    status: Mapped[str] = mapped_column(String(20), default="draft")
+
+
+class Leave(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A staff leave record (hr_management module)."""
+
+    __tablename__ = "leaves"
+
+    staff_id: Mapped[str] = mapped_column(ForeignKey("staff.id"), index=True)
+    leave_type: Mapped[str] = mapped_column(String(40))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class LibraryBook(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A book in the library catalog (library module)."""
+
+    __tablename__ = "library_books"
+
+    isbn: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    author: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    total_copies: Mapped[int] = mapped_column(Integer, default=1)
+    available_copies: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class LibraryLoan(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A book loan to a borrower (library module)."""
+
+    __tablename__ = "library_loans"
+
+    book_id: Mapped[str] = mapped_column(ForeignKey("library_books.id"), index=True)
+    borrower_id: Mapped[str] = mapped_column(String(36), index=True)
+    borrowed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    returned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class HostelRoom(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A hostel room with a capacity (hostel module)."""
+
+    __tablename__ = "hostel_rooms"
+
+    name: Mapped[str] = mapped_column(String(40))
+    capacity: Mapped[int] = mapped_column(Integer, default=1)
+    gender: Mapped[str | None] = mapped_column(String(16), nullable=True)
+
+
+class HostelAllocation(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A student's hostel room assignment (hostel module)."""
+
+    __tablename__ = "hostel_allocations"
+
+    room_id: Mapped[str] = mapped_column(ForeignKey("hostel_rooms.id"), index=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), index=True)
+    academic_year: Mapped[str] = mapped_column(String(16))
+
+
+class TransportRoute(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A transport route definition (transport module)."""
+
+    __tablename__ = "transport_routes"
+
+    name: Mapped[str] = mapped_column(String(120))
+    fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    capacity: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class TransportAssignment(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A student assigned to a transport route (transport module)."""
+
+    __tablename__ = "transport_assignments"
+
+    route_id: Mapped[str] = mapped_column(ForeignKey("transport_routes.id"), index=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id"), index=True)
+    stop_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+
+class LmsCourse(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """An e-learning course (lms module)."""
+
+    __tablename__ = "lms_courses"
+
+    title: Mapped[str] = mapped_column(String(200))
+    subject_id: Mapped[str | None] = mapped_column(ForeignKey("subjects.id"), nullable=True)
+    teacher_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class LmsLesson(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A lesson/resource within an LMS course (lms module)."""
+
+    __tablename__ = "lms_lessons"
+
+    course_id: Mapped[str] = mapped_column(ForeignKey("lms_courses.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    content_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    position: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Notification(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """An internal notification (communication_hub module)."""
+
+    __tablename__ = "notifications"
+
+    recipient_id: Mapped[str] = mapped_column(String(36), index=True)
+    channel: Mapped[str] = mapped_column(String(20), default="in_app")  # in_app/sms/email
+    subject: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    body: Mapped[str] = mapped_column(Text)
+    read: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Document(SchoolBase, UUIDPKMixin, TimestampMixin):
+    """A file reference stored in object storage (document_management module)."""
+
+    __tablename__ = "documents"
+
+    name: Mapped[str] = mapped_column(String(255))
+    storage_key: Mapped[str] = mapped_column(String(512))
+    content_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    owner_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
